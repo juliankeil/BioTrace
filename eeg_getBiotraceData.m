@@ -73,7 +73,7 @@ disp('Getting Labels...')
     if size(labels,2)==1
         tmplabels = regexprep(labels{1}, '\s+', '_');
         tmplabels = strsplit(tmplabels,'_');
-        tmplabels(end) = []; % Remove last Column Name
+        tmplabels{end+1} = 'placeholder'; % Remove last Column Name
     else
         tmplabels = labels;
     end
@@ -125,9 +125,9 @@ disp('done!');
 
 %% 7. Force data into FT-Format
 disp('Building FT Data...')
-data.label = tmplabels;         % cell-array containing strings, Nchan*1
+data.label = tmplabels(2:nEEG);         % cell-array containing strings, Nchan*1
 data.fsample = freq;            % sampling frequency in Hz, single number
-data.trial{1} = M{1}';             % cell-array containing a data matrix for each 
+data.trial{1} = M{1}(:,2:nEEG)';             % cell-array containing a data matrix for each 
                                 % trial (1 X Ntrial), each data matrix is a Nchan*Nsamples matrix 
 data.time{1} = time';              % cell-array containing a time axis for each 
                                 % trial (1 X Ntrial), each time axis is a 1*Nsamples vector 
