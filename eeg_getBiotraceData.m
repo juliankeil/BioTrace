@@ -70,7 +70,7 @@ disp('done!');
 
 %% 3. Get the data labels
 disp('Getting Labels...')
-    if size(labels{1},2)==1
+    if size(labels,2)==1
         tmplabels = regexprep(labels{1}, '\s+', '_');
         tmplabels = strsplit(tmplabels,'_');
         tmplabels(end) = []; % Remove last Column Name
