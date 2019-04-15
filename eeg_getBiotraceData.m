@@ -17,6 +17,8 @@ function [data, trl] = eeg_getBiotraceData(cfg,filename)
 % Fixed error with german data (07.11.2018, jk)
 % Avoid fucking triggers 10 and 13 in programming! they fuck up the ASCII
 % files!
+% Fixed more errors related to different matlab versions and text reading
+% (15.04.2019, jk)
 %% 1. Set Basics of data format
 tic
 
@@ -68,22 +70,28 @@ disp('done!');
 
 %% 3. Get the data labels
 disp('Getting Labels...')
-tmplabels = regexprep(labels{1}, '\s+', '_');
-tmplabels = strsplit(tmplabels,'_');
-tmplabels(end) = []; % Remove last Column Name
-nSignals = length(tmplabels); 
+    if size(labels{1},2)==1
+        tmplabels = regexprep(labels{1}, '\s+', '_');
+        tmplabels = strsplit(tmplabels,'_');
+        tmplabels(end) = []; % Remove last Column Name
+    else
+        tmplabels = labels;
+    end
+    nSignals = length(tmplabels);
+    nEEG = find(strcmp(tmplabels,'Events'))-1;
 disp('done!');
 
 %% 4. Get the number of data lines and read in data
 disp('Getting Data...')
 skip_samples = 1;  %avoid data errors at beginning
-tmp = '%d';
-tmp2 = repmat(tmp,1,nSignals-2);
-tmp3 = [tmp2,'%s%s%s%*s'];
-fid = fopen(filename)
+
+tmp = repmat('%f',1,nEEG);
+tmp2 = repmat('%s',1,(nSignals-nEEG)+1);
+tmp3 = [tmp,tmp2];
+fid = fopen(filename);
 M = textscan(fid, tmp3,...
     'HeaderLines',headerLines+skip_samples,...
-    'CollectOutput', true);
+    'CollectOutput', 1,'ReturnOnError',1);
 fclose(fid);
 disp('done!');
 
@@ -97,10 +105,10 @@ disp('done!');
 disp('Getting the Events...')
 clear event
 j = 0;
-eventCol = size(M{2},2);
+eventCol = nSignals-nEEG;
 for iEvent = 1:size(M{2},1)
     tmp = cell2mat(M{2}(iEvent,eventCol));
-    if ~strcmp(tmp,'')
+    if ~isempty(tmp) || ~strcmp(tmp,'')
         j = j+1;
         event(j).samples = samples(iEvent);
         event(j).time = time(iEvent);
@@ -119,7 +127,7 @@ disp('done!');
 disp('Building FT Data...')
 data.label = tmplabels;         % cell-array containing strings, Nchan*1
 data.fsample = freq;            % sampling frequency in Hz, single number
-data.trial{1} = M{1}(:,1:nSignals-2)';             % cell-array containing a data matrix for each 
+data.trial{1} = M{1}';             % cell-array containing a data matrix for each 
                                 % trial (1 X Ntrial), each data matrix is a Nchan*Nsamples matrix 
 data.time{1} = time';              % cell-array containing a time axis for each 
                                 % trial (1 X Ntrial), each time axis is a 1*Nsamples vector 
