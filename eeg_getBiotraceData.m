@@ -19,6 +19,9 @@ function [data, trl] = eeg_getBiotraceData(cfg,filename)
 % files!
 % Fixed more errors related to different matlab versions and text reading
 % (15.04.2019, jk)
+% Added support for continuous data without trialdef-field (03.05.2019, jk)
+% Fixed missing info for german data (17.05.2021, jk)
+
 %% 1. Set Basics of data format
 tic
 
@@ -78,7 +81,11 @@ disp('Getting Labels...')
         tmplabels = labels;
     end
     nSignals = length(tmplabels);
-    nEEG = find(strcmp(tmplabels,'Events'))-1;
+    if strcmpi(lang_format,'UK')
+        nEEG = find(strcmp(tmplabels,'Events'))-1;
+    elseif strcmpi(lang_format,'GE')
+        nEEG = find(strcmp(tmplabels,'Ereignisse'))-1;
+    end
 disp('done!');
 
 %% 4. Get the number of data lines and read in data
@@ -118,9 +125,13 @@ for iEvent = 1:size(M{2},1)
     end
 end
 
-if isempty(event)
-    return
+if exist('event','var') == 0
+    event = [];
 end
+
+%if isempty(event)
+%    return
+%end
 disp('done!');
 
 %% 7. Force data into FT-Format
@@ -133,22 +144,27 @@ data.time{1} = time';              % cell-array containing a time axis for each
                                 % trial (1 X Ntrial), each time axis is a 1*Nsamples vector 
 disp('done!');
                 
-%% Build Trial definition as trl matrix to be used with fieldtrip                
-disp('Building trl-Matrix...')
-trl=[];
+%% Build Trial definition as trl matrix to be used with fieldtrip 
+if isfield(cfg,'trialdef')
+    disp('Building trl-Matrix...')
+    trl=[];
 
-for i=1:length(event);
-    %%% Find the Correct Trials
-    if ismember(event(i).type,cfg.trialdef.eventvalue);
-      % add this to the trl definition
-      begsample = event(i).samples - cfg.trialdef.prestim*freq;
-      endsample = event(i).samples + cfg.trialdef.poststim*freq - 1;
-      offset = -cfg.trialdef.prestim*freq;  % Pre Trigger
-      
-      trl(end+1, :) = round([begsample endsample offset event(i).type]); 
-      
-    end % if
-end % event 
+    for i=1:length(event);
+        %%% Find the Correct Trials
+        if ismember(event(i).type,cfg.trialdef.eventvalue);
+          % add this to the trl definition
+          begsample = event(i).samples - cfg.trialdef.prestim*freq;
+          endsample = event(i).samples + cfg.trialdef.poststim*freq - 1;
+          offset = -cfg.trialdef.prestim*freq;  % Pre Trigger
+
+          trl(end+1, :) = round([begsample endsample offset event(i).type]); 
+
+        end % if
+    end % event 
+else
+    trl = [];
+end
 disp('done!');
+%%
 T = toc;
 fprintf('This took %i seconds\n',T)
