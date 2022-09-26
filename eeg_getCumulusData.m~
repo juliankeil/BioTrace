@@ -156,20 +156,15 @@ if isfield(cfg,'trialdef')
         end % event 
     elseif isfield(cfg.trialdef,'triallength')
         trl = cell(1,length(data.trial));
-        clear borders begsample endsample
-  
         for t = 1:length(data.trial)
             
-            tmp = data.time{t}(1):cfg.trialdef.triallength:data.time{t}(end);
-            for b = 1:length(tmp)
-                borders(b) = nearest(data.time{t},tmp(b));
-            end
-                
+            borders = 1:cfg.trialdef.triallength:data.time{t}(end);
+            for b = 1:length(
             begsample = borders(1:end-1)';
             endsample = borders(2:end)';
-            offset = zeros(length(begsample),1);
+            offset = zeros(length(begsample));
             
-            trl{t} = round([begsample endsample offset]);
+            trl{t} = round([begsample endsample]);
         end
     end
 else
